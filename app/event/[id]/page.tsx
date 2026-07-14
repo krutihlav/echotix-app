@@ -25,8 +25,7 @@ export default async function EventDetail({
   const { data: ev } = await supabase
     .from('events')
     .select(
-      'id, name, cat, date, place, map, organizer, description, image, lineup, ' +
-        'tiers(id, name, description, price, qty, sold, end_date)'
+      'id, name, cat, date, place, map, organizer, description, image, lineup, tiers(id, name, description, price, qty, sold, end_date)'
     )
     .eq('id', id)
     .single()
