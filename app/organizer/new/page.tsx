@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import EventForm from './event-form'
+import EventForm from '../event-form'
 
 export const dynamic = 'force-dynamic'
 
