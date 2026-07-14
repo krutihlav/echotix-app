@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
-import { logout } from './auth/actions'
+import NavMenu from './nav-menu'
 
 export const metadata: Metadata = {
   title: 'Echotix',
@@ -53,59 +53,18 @@ export default async function RootLayout({
                 </span>
               </Link>
               <Link href="/" className="nav-discover">
+                <span className="dot" aria-hidden="true"></span>
                 Objevit
               </Link>
             </div>
 
-            {/* CSS-only hamburger — bez JS: checkbox řídí zobrazení .acct na mobilu */}
-            <input type="checkbox" id="nav-toggle" className="nav-toggle-input" />
-            <label htmlFor="nav-toggle" className="nav-toggle-btn" aria-label="Menu">
-              ☰
-            </label>
-
-            <div className="acct">
-              {canOrganize && (
-                <>
-                  <Link href="/organizer" className="lo">
-                    Moje akce
-                  </Link>
-                  <Link href="/organizer/new" className="lo">
-                    + Vytvořit akci
-                  </Link>
-                  <Link href="/scan" className="lo">
-                    Vstup / sken
-                  </Link>
-                </>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className="lo">
-                  Admin
-                </Link>
-              )}
-              {user ? (
-                <>
-                  <Link href="/my-tickets" className="lo">
-                    Moje lístky
-                  </Link>
-                  <span className="who" title={user.email ?? ''}>
-                    {name}
-                  </span>
-                  <form action={logout}>
-                    <button className="lo" type="submit">
-                      Odhlásit
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="lo"
-                  style={{ borderColor: 'var(--amber)', color: 'var(--amber)' }}
-                >
-                  Přihlásit se
-                </Link>
-              )}
-            </div>
+            <NavMenu
+              isLoggedIn={!!user}
+              name={name}
+              email={user?.email ?? ''}
+              canOrganize={canOrganize}
+              isAdmin={isAdmin}
+            />
           </div>
         </header>
         <main>{children}</main>

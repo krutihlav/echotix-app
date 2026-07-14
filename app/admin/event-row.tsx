@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { deleteEventAdmin, toggleEventPublished } from './actions'
 
@@ -53,7 +54,7 @@ export default function AdminEventRow({
       <div className="ev-row-main">
         <strong>{event.name}</strong>
         <span className="meta">
-          {[event.cat, event.date, `pořadatel: ${ownerName}`, `${sold}/${qty} prodáno`]
+          {[event.cat, event.date, `promotér: ${ownerName}`, `${sold}/${qty} prodáno`]
             .filter(Boolean)
             .join(' · ')}
         </span>
@@ -63,6 +64,9 @@ export default function AdminEventRow({
         <span className={`pill ${published ? 'pill-live' : 'pill-draft'}`}>
           {published ? 'live' : 'koncept'}
         </span>
+        <Link href={`/organizer/${event.id}/edit`} className="btn-ghost">
+          Upravit
+        </Link>
         <button className="btn-ghost" onClick={onToggle} disabled={pending}>
           {published ? 'Skrýt' : 'Publikovat'}
         </button>

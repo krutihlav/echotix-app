@@ -64,7 +64,7 @@ async function requireOwnerOrAdmin(
   if (ev.owner_id !== user.id && !isAdmin) {
     return { ok: false as const, error: 'Nemáš oprávnění tuto akci upravovat.' }
   }
-  return { ok: true as const, user }
+  return { ok: true as const, user, isOwner: ev.owner_id === user.id }
 }
 
 export async function createEvent(input: EventInput) {
@@ -97,7 +97,7 @@ export async function createEvent(input: EventInput) {
     return {
       error:
         (e1?.message ?? 'Akci se nepodařilo vytvořit.') +
-        ' — máš roli „organizer“ nebo „admin“?',
+        ' — máš roli „promotér“ nebo „admin“?',
     }
   }
 
@@ -268,8 +268,9 @@ export async function updateEvent(eventId: string, input: EventUpdateInput) {
   }
 
   revalidatePath('/organizer')
+  revalidatePath('/admin')
   revalidatePath(`/event/${eventId}`)
-  redirect('/organizer')
+  redirect(check.isOwner ? '/organizer' : '/admin')
 }
 
 export async function toggleEventPublishedOrganizer(eventId: string, published: boolean) {

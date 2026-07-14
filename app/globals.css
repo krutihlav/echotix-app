@@ -34,36 +34,57 @@ button{font-family:inherit;cursor:pointer}
 .brand .name{font-family:var(--disp);font-weight:900;font-size:22px;letter-spacing:.01em}
 .brand .name em{color:var(--amber);font-style:normal}
 .brand-group{display:flex;align-items:center;gap:16px;flex-shrink:0}
-.nav-discover{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone-dim);transition:.16s}
-.nav-discover:hover{color:var(--amber)}
+
+/* "Objevit" — varianta B: obrys + tečka */
+.nav-discover{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:600;
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);
+  background:transparent;border:1px solid var(--amber);padding:8px 15px;border-radius:999px;transition:.16s}
+.nav-discover:hover{background:rgba(242,166,58,.12)}
+.nav-discover .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block;flex-shrink:0}
+
 .acct{display:flex;align-items:center;gap:10px}
 .acct .who{font-family:var(--mono);font-size:12px;color:var(--bone-dim)}
 .lo{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
   color:var(--bone-dim);background:transparent;border:1px solid var(--line);padding:8px 13px;border-radius:999px;transition:.16s}
 .lo:hover{color:var(--bone);border-color:var(--bone-mute)}
 
-/* ---------- hamburger (mobil) — CSS-only, žádný JS ---------- */
-.nav-toggle-input{display:none}
+/* ---------- dropdown pod jménem uživatele (desktop) ---------- */
+.user-menu{position:relative}
+.who-btn{display:flex;align-items:center;gap:6px;cursor:pointer}
+.user-dropdown{position:absolute;top:calc(100% + 8px);right:0;min-width:180px;z-index:60;
+  display:flex;flex-direction:column;gap:2px;background:var(--ink-2);border:1px solid var(--line);
+  border-radius:12px;padding:6px;box-shadow:0 12px 24px rgba(0,0,0,.35)}
+.dd-item{font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--bone-dim);background:transparent;border:none;text-align:left;padding:10px 12px;
+  border-radius:8px;cursor:pointer;width:100%}
+.dd-item:hover{background:var(--ink-3);color:var(--bone)}
+.dd-danger{color:var(--ember)}
+.dd-danger:hover{background:rgba(230,79,38,.12);color:var(--ember)}
+
+/* ---------- hamburger (mobil) — řízeno stavem v NavMenu (JS) ---------- */
 .nav-toggle-btn{display:none;font-size:20px;line-height:1;color:var(--bone);
   background:transparent;border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
 .nav-toggle-btn:hover{border-color:var(--bone-mute)}
 
+.acct-mobile{display:none}
+
 @media(max-width:700px){
   .nav-toggle-btn{display:inline-block}
-  .acct{
-    display:none;
+  .acct-desktop{display:none}
+  .acct-mobile{
+    display:flex;
     position:absolute;top:100%;left:0;right:0;
     flex-direction:column;align-items:stretch;gap:0;
     background:var(--ink-2);border-bottom:1px solid var(--line-2);
     padding:8px 16px 14px;box-shadow:0 12px 24px rgba(0,0,0,.35);
   }
-  .nav-toggle-input:checked ~ .acct{display:flex}
-  .acct .lo{width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-2);
+  .acct-mobile .lo{width:100%;text-align:left;border:none;border-bottom:1px solid var(--line-2);
     border-radius:0;padding:13px 4px}
-  .acct .who{padding:10px 4px;border-bottom:1px solid var(--line-2)}
-  .acct form{width:100%}
-  .acct form .lo{width:100%}
+  .acct-mobile .who{padding:10px 4px;border-bottom:1px solid var(--line-2)}
+  .acct-mobile form{width:100%}
+  .acct-mobile form .lo{width:100%}
 }
+
 
 /* ---------- obsah ---------- */
 main{max-width:960px;margin:0 auto;padding:28px 16px 80px}

@@ -2,6 +2,10 @@
 import { useState, useTransition } from 'react'
 import { createEvent, updateEvent } from '@/app/organizer/actions'
 import type { TierInputEdit, PromoInputEdit } from '@/app/organizer/actions'
+import { createClient } from '@/lib/supabase/client'
+
+// Klikni do číselného pole → rovnou přepiš, žádné mazání nuly předem.
+const selectOnFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select()
 
 type InitialEvent = {
   name: string
@@ -42,6 +46,7 @@ export default function EventForm({
   const [organizer, setOrganizer] = useState(initialEvent?.organizer ?? defaultOrganizer)
   const [description, setDescription] = useState(initialEvent?.description ?? '')
   const [image, setImage] = useState(initialEvent?.image ?? '')
+  const [uploading, setUploading] = useState(false)
   const [lineup, setLineup] = useState(initialEvent?.lineup ?? '')
   const [published, setPublished] = useState(initialEvent?.published ?? true)
 
@@ -52,6 +57,33 @@ export default function EventForm({
 
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // ať jde nahrát i stejný soubor znovu
+    if (!file) return
+    setError(null)
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nejsi přihlášený.')
+
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('event-images').upload(path, file)
+      if (upErr) throw upErr
+
+      const { data: pub } = supabase.storage.from('event-images').getPublicUrl(path)
+      setImage(pub.publicUrl)
+    } catch (err) {
+      setError('Nahrání obrázku selhalo: ' + (err instanceof Error ? err.message : 'neznámá chyba'))
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // --- úpravy vln ---
   const setTier = (i: number, patch: Partial<TierInputEdit>) =>
@@ -116,7 +148,7 @@ export default function EventForm({
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <div className="form-head">
-        <p className="h-eyebrow">Pořadatel</p>
+        <p className="h-eyebrow">Promotér</p>
         <h1 className="h-title">{mode === 'edit' ? 'Upravit akci' : 'Nová akce'}</h1>
       </div>
 
@@ -144,12 +176,29 @@ export default function EventForm({
             <input value={map} onChange={(e) => setMap(e.target.value)} placeholder="https://maps.app…" />
           </div>
           <div className="field">
-            <label>Pořadatel (jméno)</label>
+            <label>Promotér (jméno)</label>
             <input value={organizer} onChange={(e) => setOrganizer(e.target.value)} />
           </div>
-          <div className="field">
-            <label>Obrázek (URL)</label>
-            <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://…/plakat.jpg" />
+          <div className="field full">
+            <label>Plakát akce</label>
+            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
+            {uploading && (
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+                Nahrávám…
+              </p>
+            )}
+            {image && !uploading && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <img
+                  src={image}
+                  alt="Náhled plakátu"
+                  style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--line)' }}
+                />
+                <button type="button" className="btn-ghost btn-del" onClick={() => setImage('')}>
+                  Odebrat obrázek
+                </button>
+              </div>
+            )}
           </div>
           <div className="field full">
             <label>Popis</label>
@@ -183,7 +232,7 @@ export default function EventForm({
                 </div>
                 <div className="field" style={{ margin: 0 }}>
                   <label>Cena (Kč)</label>
-                  <input type="number" value={t.price} onChange={(e) => setTier(i, { price: Number(e.target.value) })} />
+                  <input type="number" value={t.price} onFocus={selectOnFocus} onChange={(e) => setTier(i, { price: Number(e.target.value) })} />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
                   <label>Počet ks</label>
@@ -191,6 +240,7 @@ export default function EventForm({
                     type="number"
                     min={locked ? sold : 0}
                     value={t.qty}
+                    onFocus={selectOnFocus}
                     onChange={(e) => setTier(i, { qty: Number(e.target.value) })}
                   />
                 </div>
@@ -242,13 +292,13 @@ export default function EventForm({
               </div>
               <div className="field" style={{ margin: 0 }}>
                 <label>Hodnota</label>
-                <input type="number" value={p.value} onChange={(e) => setPromo(i, { value: Number(e.target.value) })} />
+                <input type="number" value={p.value} onFocus={selectOnFocus} onChange={(e) => setPromo(i, { value: Number(e.target.value) })} />
               </div>
             </div>
             <div className="row-3" style={{ marginTop: 10 }}>
               <div className="field" style={{ margin: 0 }}>
                 <label>Limit použití</label>
-                <input type="number" value={p.usage_limit ?? ''} onChange={(e) => setPromo(i, { usage_limit: e.target.value ? Number(e.target.value) : null })} placeholder="neomezeno" />
+                <input type="number" value={p.usage_limit ?? ''} onFocus={selectOnFocus} onChange={(e) => setPromo(i, { usage_limit: e.target.value ? Number(e.target.value) : null })} placeholder="neomezeno" />
               </div>
               <div className="field" style={{ margin: 0, gridColumn: 'span 2' }}>
                 <label>Platí do (nepovinné)</label>
@@ -265,7 +315,7 @@ export default function EventForm({
           Rovnou publikovat (zobrazit na Objevit)
         </label>
 
-        <button className="btn-primary" type="button" onClick={submit} disabled={pending}>
+        <button className="btn-primary" type="button" onClick={submit} disabled={pending || uploading}>
           {pending ? 'Ukládám…' : mode === 'edit' ? 'Uložit změny' : 'Vytvořit akci'}
         </button>
 
