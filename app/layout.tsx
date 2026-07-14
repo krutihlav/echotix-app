@@ -46,14 +46,29 @@ export default async function RootLayout({
 
         <header className="bar">
           <div className="bar-in">
-            <Link href="/" className="brand">
-              <span className="name">
-                ECHO<em>TIX</em>
-              </span>
-            </Link>
+            <div className="brand-group">
+              <Link href="/" className="brand">
+                <span className="name">
+                  ECHO<em>TIX</em>
+                </span>
+              </Link>
+              <Link href="/" className="nav-discover">
+                Objevit
+              </Link>
+            </div>
+
+            {/* CSS-only hamburger — bez JS: checkbox řídí zobrazení .acct na mobilu */}
+            <input type="checkbox" id="nav-toggle" className="nav-toggle-input" />
+            <label htmlFor="nav-toggle" className="nav-toggle-btn" aria-label="Menu">
+              ☰
+            </label>
+
             <div className="acct">
               {canOrganize && (
                 <>
+                  <Link href="/organizer" className="lo">
+                    Moje akce
+                  </Link>
                   <Link href="/organizer/new" className="lo">
                     + Vytvořit akci
                   </Link>
