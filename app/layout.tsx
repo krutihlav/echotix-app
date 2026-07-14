@@ -31,6 +31,7 @@ export default async function RootLayout({
 
   const name = (user?.user_metadata?.name as string) || user?.email || ''
   const canOrganize = role === 'organizer' || role === 'admin'
+  const isAdmin = role === 'admin'
 
   return (
     <html lang="cs">
@@ -60,6 +61,11 @@ export default async function RootLayout({
                     Vstup / sken
                   </Link>
                 </>
+              )}
+              {isAdmin && (
+                <Link href="/admin" className="lo">
+                  Admin
+                </Link>
               )}
               {user ? (
                 <>
