@@ -1,6 +1,9 @@
+// Cesta v projektu: app/api/stripe/webhook/route.ts (přepsat stávající soubor)
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendTicketEmail } from '@/lib/email/send-ticket-email'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -53,8 +56,54 @@ export async function POST(req: NextRequest) {
         .from('tickets')
         .update({ stripe_payment_intent_id: intent.id })
         .eq('id', ticket.id)
+
+      // ODESLÁNÍ E-MAILU SE VSTUPENKOU
+      //
+      // POZOR: dotaz níže předpokládá, že Supabase relace `events` a `tiers`
+      // jsou dostupné přes FK join (tickets.event_id -> events, tickets.tier_id -> tiers)
+      // a že sloupce se jmenují `code`, `events.name`, `events.date`, `tiers.name`.
+      // Uprav názvy sloupců/relací podle skutečného schématu, pokud se liší -
+      // pošli mi `select` definici tabulek nebo zprávu o chybě a doladím to přesně.
+      const { data: fullTicket, error: fetchError } = await admin
+        .from('tickets')
+        .select('code, events(name, date), tiers(name)')
+        .eq('id', ticket.id)
+        .single()
+
+      if (fetchError || !fullTicket) {
+        console.error('Nepodařilo se načíst detail lístku pro e-mail:', fetchError?.message)
+      } else {
+        const eventData = Array.isArray(fullTicket.events) ? fullTicket.events[0] : fullTicket.events
+        const tierData = Array.isArray(fullTicket.tiers) ? fullTicket.tiers[0] : fullTicket.tiers
+
+        const emailResult = await sendTicketEmail({
+          to: holder_email,
+          holderName: holder_name,
+          eventName: eventData?.name ?? '',
+          waveName: tierData?.name ?? '',
+          eventDate: formatEventDate(eventData?.date),
+          ticketCode: fullTicket.code,
+          ticketUrl: `https://echotix-app.vercel.app/ticket/${fullTicket.code}`,
+        })
+
+        if (!emailResult.success) {
+          // Lístek existuje, jen e-mail selhal - nevracíme chybu Stripu, pouze logujeme
+          console.error('Odeslání e-mailu se vstupenkou selhalo:', emailResult.error)
+        }
+      }
     }
   }
 
   return NextResponse.json({ received: true })
+}
+
+function formatEventDate(rawDate: string | undefined): string {
+  if (!rawDate) return ''
+  return new Date(rawDate).toLocaleDateString('cs-CZ', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
