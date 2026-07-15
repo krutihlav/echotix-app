@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient()
 
-  // Cenu vždy počítáme tady na serveru, nikdy nedůvěřujeme částce z klienta.
   const { data: tier, error: tierErr } = await supabase
     .from('tiers')
     .select('id, price, qty, sold, end_date, event_id')
@@ -65,7 +64,6 @@ export async function POST(req: NextRequest) {
     appliedPromo = promoResult.code
   }
 
-  // Bezplatné lístky nejdou přes Stripe — vytvoříme rovnou přes service_role.
   if (total <= 0) {
     const admin = createAdminClient()
     const { data: ticket, error } = await admin.rpc('purchase_ticket', {
@@ -87,7 +85,7 @@ export async function POST(req: NextRequest) {
   const intent = await stripe.paymentIntents.create({
     amount: amountInHalir,
     currency: 'czk',
-    automatic_payment_methods: { enabled: true },
+    payment_method_types: ['card'],
     metadata: {
       event_id,
       tier_id,

@@ -9,6 +9,19 @@ import PaymentStep from '@/components/checkout/payment-step'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
+// Zúžené odsazení/písmo, ať karta vizuálně sedí do kompaktního modalu.
+// Barvy jsou orientační (night theme) — jakmile pošleš globals.css, doladím
+// na přesné --amber/--ink/--ember/--bone hodnoty.
+const stripeAppearance = {
+  theme: 'night' as const,
+  variables: {
+    colorPrimary: '#BA7517',
+    fontSizeBase: '13px',
+    spacingUnit: '3px',
+    borderRadius: '8px',
+  },
+}
+
 type Tier = {
   id: string
   name: string
@@ -55,7 +68,6 @@ export default function Checkout({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Jakmile server vytvoří Stripe PaymentIntent, přepneme modal do platebního kroku.
   const [clientSecret, setClientSecret] = useState<string | null>(null)
 
   const left = openTier ? openTier.qty - openTier.sold : 0
@@ -334,7 +346,10 @@ export default function Checkout({
                 <p className="fine">Platba probíhá bezpečně přes Stripe. Lístek je vázaný na termín akce.</p>
               </>
             ) : (
-              <Elements stripe={stripePromise} options={{ clientSecret, locale: 'cs' }}>
+              <Elements
+                stripe={stripePromise}
+                options={{ clientSecret, locale: 'cs', appearance: stripeAppearance }}
+              >
                 <PaymentStep amount={total} onBack={() => setClientSecret(null)} />
               </Elements>
             )}
