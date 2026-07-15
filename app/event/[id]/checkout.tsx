@@ -2,7 +2,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 import { createClient } from '@/lib/supabase/client'
+import PaymentStep from '@/components/checkout/payment-step'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 type Tier = {
   id: string
@@ -50,6 +55,9 @@ export default function Checkout({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Jakmile server vytvoří Stripe PaymentIntent, přepneme modal do platebního kroku.
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+
   const left = openTier ? openTier.qty - openTier.sold : 0
   const base = (openTier?.price ?? 0) * qty
   const total = Math.max(0, base - (promoOk ? discount : 0))
@@ -68,16 +76,17 @@ export default function Checkout({
     setEmail(defaultEmail)
     resetPromo()
     setError(null)
+    setClientSecret(null)
   }
 
   function close() {
     setOpenTierId(null)
+    setClientSecret(null)
   }
 
   function changeQty(d: number) {
     const cap = Math.min(left, MAX_PER_ORDER)
     setQty((q) => Math.max(1, Math.min(q + d, cap)))
-    // sleva se počítá z původního základu → po změně počtu ji radši zneplatníme
     if (promoOk || promoNote) resetPromo()
   }
 
@@ -104,7 +113,7 @@ export default function Checkout({
     }
   }
 
-  async function pay() {
+  async function startPayment() {
     if (!openTier) return
     if (!name.trim() || !email.trim()) {
       setError('Doplň jméno a e-mail.')
@@ -112,20 +121,33 @@ export default function Checkout({
     }
     setBusy(true)
     setError(null)
-    const { data, error } = await supabase.rpc('purchase_ticket', {
-      p_event_id: eventId,
-      p_tier_id: openTier.id,
-      p_qty: qty,
-      p_holder_name: name.trim(),
-      p_holder_email: email.trim(),
-      p_promo_code: promoOk ? promo.trim() : null,
+
+    const res = await fetch('/api/checkout/create-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_id: eventId,
+        tier_id: openTier.id,
+        qty,
+        promo_code: promoOk ? promo.trim() : null,
+        holder_name: name.trim(),
+        holder_email: email.trim(),
+      }),
     })
+    const data = await res.json()
     setBusy(false)
-    if (error) {
-      setError(error.message)
+
+    if (!res.ok) {
+      setError(data.error || 'Něco se pokazilo, zkus to znovu.')
       return
     }
-    router.push('/ticket/' + data.code)
+
+    if (data.free) {
+      router.push('/ticket/' + data.code)
+      return
+    }
+
+    setClientSecret(data.client_secret)
   }
 
   return (
@@ -201,111 +223,121 @@ export default function Checkout({
               </button>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: 14,
-              }}
-            >
-              <div className="muted" style={{ fontSize: 13 }}>
-                {openTier.description || 'vstupenka'}
-              </div>
-              <div className="stepper">
-                <button onClick={() => changeQty(-1)} disabled={qty <= 1} aria-label="ubrat">
-                  –
-                </button>
-                <div className="n">{qty}</div>
-                <button
-                  onClick={() => changeQty(1)}
-                  disabled={qty >= Math.min(left, MAX_PER_ORDER)}
-                  aria-label="přidat"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            <label className="fld">
-              <span className="lab">Jméno a příjmení</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jan Novák" />
-            </label>
-            <label className="fld">
-              <span className="lab">E-mail (sem přijde lístek)</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ty@email.cz"
-              />
-            </label>
-
-            <div style={{ marginTop: 14, borderTop: '1px dashed var(--line)', paddingTop: 14 }}>
-              <label className="fld" style={{ marginTop: 0 }}>
-                <span className="lab">Slevový kód</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    value={promo}
-                    onChange={(e) => setPromo(e.target.value.toUpperCase())}
-                    placeholder="volitelné"
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                  <button className="btn btn-bone" type="button" onClick={applyPromo}>
-                    Použít
-                  </button>
-                </div>
-              </label>
-              {promoNote && (
+            {!clientSecret ? (
+              <>
                 <div
                   style={{
-                    fontSize: 12,
-                    marginTop: 6,
-                    fontFamily: 'var(--mono)',
-                    color: promoOk ? 'var(--verd)' : 'var(--ember)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 14,
                   }}
                 >
-                  {promoNote}
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    {openTier.description || 'vstupenka'}
+                  </div>
+                  <div className="stepper">
+                    <button onClick={() => changeQty(-1)} disabled={qty <= 1} aria-label="ubrat">
+                      –
+                    </button>
+                    <div className="n">{qty}</div>
+                    <button
+                      onClick={() => changeQty(1)}
+                      disabled={qty >= Math.min(left, MAX_PER_ORDER)}
+                      aria-label="přidat"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            <div className="totrow">
-              <span className="l">Celkem</span>
-              <span className="v">
-                {promoOk && discount > 0 && (
-                  <span
-                    style={{
-                      textDecoration: 'line-through',
-                      color: 'var(--bone-dim)',
-                      fontSize: 20,
-                      marginRight: 8,
-                    }}
-                  >
-                    {fmt(base)}
+                <label className="fld">
+                  <span className="lab">Jméno a příjmení</span>
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jan Novák" />
+                </label>
+                <label className="fld">
+                  <span className="lab">E-mail (sem přijde lístek)</span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ty@email.cz"
+                  />
+                </label>
+
+                <div style={{ marginTop: 14, borderTop: '1px dashed var(--line)', paddingTop: 14 }}>
+                  <label className="fld" style={{ marginTop: 0 }}>
+                    <span className="lab">Slevový kód</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        value={promo}
+                        onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                        placeholder="volitelné"
+                        style={{ textTransform: 'uppercase' }}
+                      />
+                      <button className="btn btn-bone" type="button" onClick={applyPromo}>
+                        Použít
+                      </button>
+                    </div>
+                  </label>
+                  {promoNote && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        marginTop: 6,
+                        fontFamily: 'var(--mono)',
+                        color: promoOk ? 'var(--verd)' : 'var(--ember)',
+                      }}
+                    >
+                      {promoNote}
+                    </div>
+                  )}
+                </div>
+
+                <div className="totrow">
+                  <span className="l">Celkem</span>
+                  <span className="v">
+                    {promoOk && discount > 0 && (
+                      <span
+                        style={{
+                          textDecoration: 'line-through',
+                          color: 'var(--bone-dim)',
+                          fontSize: 20,
+                          marginRight: 8,
+                        }}
+                      >
+                        {fmt(base)}
+                      </span>
+                    )}
+                    {total > 0 ? fmt(total) : 'zdarma'}
                   </span>
+                </div>
+
+                <button
+                  className="btn btn-verd btn-block"
+                  style={{ marginTop: 16 }}
+                  onClick={startPayment}
+                  disabled={busy}
+                >
+                  {busy
+                    ? 'Připravuji platbu…'
+                    : total > 0
+                    ? 'Pokračovat k platbě'
+                    : 'Získat lístek zdarma'}
+                </button>
+
+                {error && (
+                  <p style={{ color: 'var(--ember)', fontSize: 13, marginTop: 10, textAlign: 'center' }}>
+                    {error}
+                  </p>
                 )}
-                {total > 0 ? fmt(total) : 'zdarma'}
-              </span>
-            </div>
-
-            <button
-              className="btn btn-verd btn-block"
-              style={{ marginTop: 16 }}
-              onClick={pay}
-              disabled={busy}
-            >
-              {busy ? 'Zpracovávám…' : total > 0 ? 'Zaplatit ' + fmt(total) : 'Získat lístek zdarma'}
-            </button>
-
-            {error && (
-              <p style={{ color: 'var(--ember)', fontSize: 13, marginTop: 10, textAlign: 'center' }}>
-                {error}
-              </p>
+                <p className="fine">Platba probíhá bezpečně přes Stripe. Lístek je vázaný na termín akce.</p>
+              </>
+            ) : (
+              <Elements stripe={stripePromise} options={{ clientSecret, locale: 'cs' }}>
+                <PaymentStep amount={total} onBack={() => setClientSecret(null)} />
+              </Elements>
             )}
-            <p className="fine">
-              Demo platba (bez skutečné karty). Lístek je vázaný na termín akce.
-            </p>
           </div>
         </div>
       )}
