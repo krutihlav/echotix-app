@@ -41,7 +41,7 @@ export async function sendTicketEmail(params: SendTicketEmailParams) {
       {
         content: qrBuffer.toString('base64'),
         filename: 'qr-kod.png',
-        content_id: 'ticket-qr',
+        contentId: 'ticket-qr',
       },
     ],
   })
