@@ -95,7 +95,9 @@ export async function POST(req: NextRequest) {
           waveName: tierData?.name ?? '',
           eventDate: formatEventDate(eventData?.date),
           ticketCode: fullTicket.code,
-          ticketUrl: `https://echotix-app.vercel.app/ticket/${fullTicket.code}`,
+          // Netlify je od migrace primární doména - Vercel zůstává jako záloha,
+          // ale odkazy v e-mailech míří na skutečnou (Netlify) URL.
+          ticketUrl: `https://subtix.netlify.app/ticket/${fullTicket.code}`,
         })
 
         if (!emailResult.success) {
