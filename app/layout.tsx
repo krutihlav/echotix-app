@@ -49,7 +49,7 @@ export default async function RootLayout({
             <div className="brand-group">
               <Link href="/" className="brand">
                 <span className="name">
-                  ECHO<em>TIX</em>
+                  SUB<em>TIX</em>
                 </span>
               </Link>
               <Link href="/" className="nav-discover">
