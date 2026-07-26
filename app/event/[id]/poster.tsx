@@ -1,9 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export default function EventPoster({ src, alt }: { src: string; alt: string }) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <>
@@ -16,22 +22,25 @@ export default function EventPoster({ src, alt }: { src: string; alt: string }) 
         <img src={src} alt={alt} className="ev-poster-img" />
       </button>
 
-      {open ? (
-        <div className="lightbox" onClick={() => setOpen(false)}>
-          <img src={src} alt={alt} />
-          <button
-            type="button"
-            className="lightbox-close"
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpen(false)
-            }}
-            aria-label="Zavřít"
-          >
-            ✕
-          </button>
-        </div>
-      ) : null}
+      {open && mounted
+        ? createPortal(
+            <div className="lightbox" onClick={() => setOpen(false)}>
+              <img src={src} alt={alt} />
+              <button
+                type="button"
+                className="lightbox-close"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpen(false)
+                }}
+                aria-label="Zavřít"
+              >
+                ✕
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   )
 }
