@@ -30,47 +30,45 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
-    const { data: existing } = await admin
-      .from('tickets')
-      .select('id')
-      .eq('stripe_payment_intent_id', intent.id)
-      .maybeSingle()
+    // payment_intent_id se posílá přímo do purchase_ticket RPC, které je teď
+    // idempotentní - pokud webhook dorazí vícekrát pro stejnou platbu (Stripe
+    // to umí, ať už retry nebo duplicitní doručení), RPC vrátí ten samý
+    // existující lístek místo vytvoření duplicity a spotřeby kapacity navíc.
+    const { data: result, error } = await admin.rpc('purchase_ticket', {
+      p_event_id: event_id,
+      p_tier_id: tier_id,
+      p_qty: Number(qty),
+      p_holder_name: holder_name,
+      p_holder_email: holder_email,
+      p_promo_code: promo_code || null,
+      p_payment_intent_id: intent.id,
+    })
 
-    if (!existing) {
-      const { data: ticket, error } = await admin.rpc('purchase_ticket', {
-        p_event_id: event_id,
-        p_tier_id: tier_id,
-        p_qty: Number(qty),
-        p_holder_name: holder_name,
-        p_holder_email: holder_email,
-        p_promo_code: promo_code || null,
-      })
+    if (error) {
+      console.error('purchase_ticket selhal po úspěšné platbě, vracím peníze:', error.message)
 
-      if (error) {
-        console.error('purchase_ticket selhal po úspěšné platbě, vracím peníze:', error.message)
+      // Uložíme důvod, aby o něm frontend (app/ticket/pending) mohl
+      // zákazníka informovat hned, místo čekání na timeout.
+      const { error: logError } = await admin
+        .from('payment_failures')
+        .upsert(
+          { payment_intent_id: intent.id, reason: error.message },
+          { onConflict: 'payment_intent_id' }
+        )
 
-        // Uložíme důvod, aby o něm frontend (app/ticket/pending) mohl
-        // zákazníka informovat hned, místo čekání na timeout.
-        const { error: logError } = await admin
-          .from('payment_failures')
-          .upsert(
-            { payment_intent_id: intent.id, reason: error.message },
-            { onConflict: 'payment_intent_id' }
-          )
-
-        if (logError) {
-          console.error('Nepodařilo se zapsat payment_failures záznam:', logError.message)
-        }
-
-        await stripe.refunds.create({ payment_intent: intent.id })
-        return NextResponse.json({ received: true, refunded: true })
+      if (logError) {
+        console.error('Nepodařilo se zapsat payment_failures záznam:', logError.message)
       }
 
-      await admin
-        .from('tickets')
-        .update({ stripe_payment_intent_id: intent.id })
-        .eq('id', ticket.id)
+      await stripe.refunds.create({ payment_intent: intent.id })
+      return NextResponse.json({ received: true, refunded: true })
+    }
 
+    const ticket = result.ticket
+
+    // Pokud lístek už existoval (tohle volání webhooku je duplicitní/retry),
+    // e-mail už byl odeslaný napoprvé - neposílat ho znovu.
+    if (result.is_new) {
       // ODESLÁNÍ E-MAILU SE VSTUPENKOU
       //
       // POZOR: dotaz níže předpokládá, že Supabase relace `events` a `tiers`
