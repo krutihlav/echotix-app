@@ -48,6 +48,20 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error('purchase_ticket selhal po úspěšné platbě, vracím peníze:', error.message)
+
+        // Uložíme důvod, aby o něm frontend (app/ticket/pending) mohl
+        // zákazníka informovat hned, místo čekání na timeout.
+        const { error: logError } = await admin
+          .from('payment_failures')
+          .upsert(
+            { payment_intent_id: intent.id, reason: error.message },
+            { onConflict: 'payment_intent_id' }
+          )
+
+        if (logError) {
+          console.error('Nepodařilo se zapsat payment_failures záznam:', logError.message)
+        }
+
         await stripe.refunds.create({ payment_intent: intent.id })
         return NextResponse.json({ received: true, refunded: true })
       }
