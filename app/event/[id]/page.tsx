@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Checkout from './checkout'
+import EventPoster from './poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,72 +60,82 @@ export default async function EventDetail({
         ← všechny akce
       </Link>
 
-      {ev.image ? (
-        <div
-          className="ev-hero-img"
-          style={{ backgroundImage: `url('${ev.image}')` }}
-        />
-      ) : null}
-
-      <div className="ev-hero">
-        {ev.cat ? (
-          <div
-            style={{
-              fontFamily: 'var(--mono)',
-              fontSize: 12,
-              letterSpacing: '.28em',
-              textTransform: 'uppercase',
-              color: 'var(--bone-dim)',
-            }}
-          >
-            {ev.cat}
-          </div>
-        ) : null}
-
-        <div className="echo" style={{ marginTop: 10 }}>
-          <span className="g g3">{ev.name}</span>
-          <span className="g g2">{ev.name}</span>
-          <span className="g g1">{ev.name}</span>
-          <h1>{ev.name}</h1>
+      <div className="ev-layout">
+        <div className="ev-layout-poster">
+          {ev.image ? (
+            <EventPoster src={ev.image} alt={ev.name} />
+          ) : (
+            <div className="ev-poster-empty" />
+          )}
         </div>
 
-        <div className="meta-line">
-          <span>
-            <span className="k">◈</span> {ev.date || 'termín brzy'}
-          </span>
-          <span>
-            <span className="k">◈</span>{' '}
-            {ev.map ? (
-              <a href={ev.map} target="_blank" rel="noreferrer" style={{ color: 'var(--amber)' }}>
-                {ev.place || 'místo'} ↗
-              </a>
-            ) : (
-              ev.place || 'místo brzy'
-            )}
-          </span>
-        </div>
+        <div className="ev-layout-main">
+          <div className="ev-hero">
+            {ev.cat ? (
+              <div
+                style={{
+                  fontFamily: 'var(--mono)',
+                  fontSize: 12,
+                  letterSpacing: '.28em',
+                  textTransform: 'uppercase',
+                  color: 'var(--bone-dim)',
+                }}
+              >
+                {ev.cat}
+              </div>
+            ) : null}
 
-        {lineup.length > 0 && (
-          <div className="chips">
-            {lineup.map((l, i) => (
-              <span key={i} className={'chip' + (i === 0 ? ' hi' : '')}>
-                {l}
+            <div className="echo" style={{ marginTop: 10 }}>
+              <span className="g g3">{ev.name}</span>
+              <span className="g g2">{ev.name}</span>
+              <span className="g g1">{ev.name}</span>
+              <h1>{ev.name}</h1>
+            </div>
+
+            <div className="meta-line">
+              <span>
+                <span className="k">◈</span> {ev.date || 'termín brzy'}
               </span>
-            ))}
+              <span>
+                <span className="k">◈</span>{' '}
+                {ev.map ? (
+                  <a
+                    href={ev.map}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'var(--amber)' }}
+                  >
+                    {ev.place || 'místo'} ↗
+                  </a>
+                ) : (
+                  ev.place || 'místo brzy'
+                )}
+              </span>
+            </div>
+
+            {lineup.length > 0 && (
+              <div className="chips">
+                {lineup.map((l, i) => (
+                  <span key={i} className={'chip' + (i === 0 ? ' hi' : '')}>
+                    {l}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {ev.description ? <p className="ev-desc">{ev.description}</p> : null}
           </div>
-        )}
 
-        {ev.description ? <p className="ev-desc">{ev.description}</p> : null}
+          <Checkout
+            eventId={ev.id}
+            eventName={ev.name}
+            tiers={tiers}
+            isLoggedIn={!!user}
+            defaultName={(user?.user_metadata?.name as string) || ''}
+            defaultEmail={user?.email || ''}
+          />
+        </div>
       </div>
-
-      <Checkout
-        eventId={ev.id}
-        eventName={ev.name}
-        tiers={tiers}
-        isLoggedIn={!!user}
-        defaultName={(user?.user_metadata?.name as string) || ''}
-        defaultEmail={user?.email || ''}
-      />
 
       <div
         style={{
@@ -137,7 +148,7 @@ export default async function EventDetail({
           color: 'var(--bone-dim)',
         }}
       >
-        pořádá {ev.organizer || '—'} · přes <span style={{ color: 'var(--amber)' }}>Echotix</span>
+        pořádá {ev.organizer || '—'} · přes <span style={{ color: 'var(--amber)' }}>Subtix</span>
       </div>
     </div>
   )
