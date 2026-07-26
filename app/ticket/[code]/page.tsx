@@ -45,7 +45,7 @@ export default async function TicketPage({
       <div className="pass">
         <div className="pass-top">
           <div className="eyebrow" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Echotix · vstupenka</span>
+            <span>Subtix · vstupenka</span>
             {t.used ? (
               <span style={{ color: 'var(--ember)' }}>Použito</span>
             ) : (

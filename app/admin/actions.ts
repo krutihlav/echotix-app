@@ -54,7 +54,7 @@ export async function deleteEventAdmin(eventId: string) {
   const { supabase } = check
 
   // Pojistka: nedovolit smazat akci, která má prodané lístky (viz cascade
-  // delete tickets.event_id v echotix_setup.sql — v aplikaci to blokujeme tvrdě).
+  // delete tickets.event_id v subtix_setup.sql — v aplikaci to blokujeme tvrdě).
   const { data: tiers, error: eTiers } = await supabase
     .from('tiers')
     .select('sold')

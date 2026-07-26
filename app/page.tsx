@@ -47,10 +47,10 @@ export default async function Discover() {
       <div className="hub">
         <div className="sub">předprodej pro každého, kdo dělá zvuk</div>
         <div className="echo">
-          <span className="g g3">Echotix</span>
-          <span className="g g2">Echotix</span>
-          <span className="g g1">Echotix</span>
-          <h1>Echotix</h1>
+          <span className="g g3">Subtix</span>
+          <span className="g g2">Subtix</span>
+          <span className="g g1">Subtix</span>
+          <h1>Subtix</h1>
         </div>
         <p className="lead">
           Kup si lístek, načti ho na vstupu. Žádné papíry, žádní překupníci — jen ty, sound a

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import NavMenu from './nav-menu'
 
 export const metadata: Metadata = {
-  title: 'Echotix',
+  title: 'Subtix',
   description: 'Vstupenky na akce, které stojí za to.',
 }
 

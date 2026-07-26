@@ -12,7 +12,7 @@ interface SendTicketEmailParams {
   waveName: string      // typ vlny / tier
   eventDate: string      // předformátovaný string (viz formatEventDate ve webhooku)
   ticketCode: string     // "DUB-XXXX-XXXX"
-  ticketUrl: string      // https://echotix-app.vercel.app/ticket/DUB-XXXX-XXXX
+  ticketUrl: string      // https://subtix-app.vercel.app/ticket/DUB-XXXX-XXXX
 }
 
 export async function sendTicketEmail(params: SendTicketEmailParams) {
@@ -32,8 +32,8 @@ export async function sendTicketEmail(params: SendTicketEmailParams) {
   })
 
   const { data, error } = await resend.emails.send({
-    // TODO: až bude ověřená dubtix.cz, změnit na 'Dubtix <tickets@dubtix.cz>'
-    from: 'Dubtix <onboarding@resend.dev>',
+    // TODO: až bude ověřená subtix.cz, změnit na 'Subtix <tickets@subtix.cz>'
+    from: 'Subtix <onboarding@resend.dev>',
     to: [to],
     subject: `Tvoje vstupenka — ${eventName}`,
     html,
@@ -65,7 +65,7 @@ function buildTicketEmailHtml(p: {
 }) {
   return `
   <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background:#0a0a0a; color:#f2f2f2; padding: 32px 24px; border-radius: 12px;">
-    <p style="letter-spacing: 2px; font-size: 12px; text-transform: uppercase; color:#f0a500; margin: 0 0 4px;">Dubtix</p>
+    <p style="letter-spacing: 2px; font-size: 12px; text-transform: uppercase; color:#f0a500; margin: 0 0 4px;">Subtix</p>
     <h1 style="font-size: 22px; margin: 0 0 24px;">${escapeHtml(p.eventName)}</h1>
 
     <p style="margin: 0 0 4px; color:#999; font-size: 13px;">Držitel</p>
